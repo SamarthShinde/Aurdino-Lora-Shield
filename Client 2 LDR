@@ -1,0 +1,35 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+const int ldrPin = A0;
+
+const int csPin = 10;
+const int resetPin = 9;
+const int irqPin = 2;
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+
+  if (!LoRa.begin(868E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void sendSensorData(int ldrValue) {
+  String data = "Client2 LDR:" + String(ldrValue);
+
+  LoRa.beginPacket();
+  LoRa.print(data);
+  LoRa.endPacket();
+
+  Serial.println("Data Sent: " + data);
+
+  delay(2000);
+}
+
+void loop() {
+  int ldrValue = analogRead(ldrPin);
+  sendSensorData(ldrValue);
+}
