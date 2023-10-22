@@ -1,0 +1,45 @@
+#include <SPI.h>
+#include <LoRa.h>
+#include <DHT.h>
+
+#define DHTPIN 5
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE);
+
+const int csPin = 10;
+const int resetPin = 9;
+const int irqPin = 2;
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+
+  if (!LoRa.begin(868E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+
+  dht.begin();
+}
+
+void sendSensorData(float temperature, float humidity) {
+  String data = "Client1 Temp:" + String(temperature) + " Hum:" + String(humidity);
+
+  LoRa.beginPacket();
+  LoRa.print(data);
+  LoRa.endPacket();
+
+  Serial.println("Data Sent: " + data);
+
+  delay(2000);
+}
+
+void loop() {
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+
+  if (!isnan(humidity) && !isnan(temperature)) {
+    sendSensorData(temperature, humidity);
+  }
+}
