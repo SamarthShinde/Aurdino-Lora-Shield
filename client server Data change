@@ -1,0 +1,194 @@
+server:- 
+#include <SPI.h>
+#include <LoRa.h>
+
+const int csPin = 10;
+const int resetPin = 9;
+const int irqPin = 2;
+
+String prevDataClient1 = "";
+String prevDataClient2 = "";
+String prevDataClient3 = "";
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+
+  if (!LoRa.begin(868E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void receiveSensorData() {
+  int packetSize = LoRa.parsePacket();
+  if (packetSize) {
+    String receivedData = "";
+    while (LoRa.available()) {
+      receivedData += (char)LoRa.read();
+    }
+
+    if (receivedData.startsWith("Client1") && receivedData != prevDataClient1) {
+      Serial.println("Received from Client 1: " + receivedData);
+      prevDataClient1 = receivedData;
+    }
+    else if (receivedData.startsWith("Client2") && receivedData != prevDataClient2) {
+      Serial.println("Received from Client 2: " + receivedData);
+      prevDataClient2 = receivedData;
+    }
+    else if (receivedData.startsWith("Client3") && receivedData != prevDataClient3) {
+      Serial.println("Received from Client 3: " + receivedData);
+      prevDataClient3 = receivedData;
+    }
+  }
+}
+
+void loop() {
+  receiveSensorData();
+}
+
+
+
+
+Client 1:-
+#include <SPI.h>
+#include <LoRa.h>
+#include <DHT.h>
+
+#define DHTPIN 5
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE);
+
+const int csPin = 10;
+const int resetPin = 9;
+const int irqPin = 2;
+
+float prevTemperature = -1;
+float prevHumidity = -1;
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+
+  if (!LoRa.begin(868E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+
+  dht.begin();
+}
+
+void sendSensorData(float temperature, float humidity) {
+  String data = "Client1 Temp:" + String(temperature) + " Hum:" + String(humidity);
+
+  LoRa.beginPacket();
+  LoRa.print(data);
+  LoRa.endPacket();
+
+  Serial.println("Data Sent: " + data);
+
+  delay(2000);
+}
+
+void loop() {
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+
+  if (!isnan(humidity) && !isnan(temperature)) {
+    if (temperature != prevTemperature || humidity != prevHumidity) {
+      sendSensorData(temperature, humidity);
+      prevTemperature = temperature;
+      prevHumidity = humidity;
+    }
+  }
+}
+
+
+Client 2:-
+#include <SPI.h>
+#include <LoRa.h>
+
+const int ldrPin = A0;
+
+const int csPin = 10;
+const int resetPin = 9;
+const int irqPin = 2;
+
+int prevLdrValue = -1;
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+
+  if (!LoRa.begin(868E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+}
+
+void sendSensorData(int ldrValue) {
+  String data = "Client2 LDR:" + String(ldrValue);
+
+  LoRa.beginPacket();
+  LoRa.print(data);
+  LoRa.endPacket();
+
+  Serial.println("Data Sent: " + data);
+
+  delay(2000);
+}
+
+void loop() {
+  int ldrValue = analogRead(ldrPin);
+
+  if (ldrValue != prevLdrValue) {
+    sendSensorData(ldrValue);
+    prevLdrValue = ldrValue;
+  }
+}
+
+Client 3:- 
+#include <SPI.h>
+#include <LoRa.h>
+
+const int pirPin = 7;
+
+const int csPin = 10;
+const int resetPin = 9;
+const int irqPin = 2;
+
+int prevMotionState = -1;
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+
+  if (!LoRa.begin(868E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+
+  pinMode(pirPin, INPUT);
+}
+
+void sendSensorData(int motionDetected) {
+  String data = "Client3 PIR:" + String(motionDetected);
+
+  LoRa.beginPacket();
+  LoRa.print(data);
+  LoRa.endPacket();
+
+  Serial.println("Data Sent: " + data);
+
+  delay(2000);
+}
+
+void loop() {
+  int motionDetected = digitalRead(pirPin);
+
+  if (motionDetected != prevMotionState) {
+    sendSensorData(motionDetected);
+    prevMotionState = motionDetected;
+  }
+}
